@@ -1,0 +1,2 @@
+// To proxy API calls during dev, add this to vite.config.ts:
+// server: { port: 5173, proxy: { "/api": { target: "http://localhost:3001", changeOrigin: true } } }

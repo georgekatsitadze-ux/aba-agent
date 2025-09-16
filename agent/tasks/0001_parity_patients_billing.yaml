@@ -1,0 +1,7 @@
+# Example high-level goal the agent will pursue
+title: 'Parity: Patients & Billing v0'
+milestones:
+  - Create Patients page with table, search, add/edit modal
+  - Create Billing page with invoice list and "create invoice" flow
+  - Hook to /server REST endpoints
+  - Add Playwright tests for happy paths
