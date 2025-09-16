@@ -1,0 +1,32 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20250916150614
+Username: DELL_LAPTOP_GK\gioka
+RunAs User: DELL_LAPTOP_GK\gioka
+Configuration Name: 
+Machine: DELL_LAPTOP_GK (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 9096
+PSVersion: 5.1.26100.6584
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.6584
+BuildVersion: 10.0.26100.6584
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\magellan\aba-agent\app\step4-build-20250916-150614.log
+Working directory: C:\magellan\aba-agent\app
+Nothing on port 4173
+
+
+Running: C:\Program Files\nodejs\npm.cmd install
+Running: C:\Program Files\nodejs\npm.cmd install -D @vitejs/plugin-react
+Running: C:\Program Files\nodejs\npm.cmd run build
+
+Build completed successfully.
+**********************
+Windows PowerShell transcript end
+End time: 20250916150634
+**********************

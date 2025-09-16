@@ -1,0 +1,12 @@
+title: Clinical v1 polish (clean-room)
+goals:
+  - Improve Clinical/GoalsPage usability (labels, spacing, required fields)
+  - Add simple line chart of session values over time (client-only)
+  - Add data-testid attributes the tests can target
+deliverables:
+  - app/src/modules/Clinical/GoalsPage.tsx
+  - app/src/modules/Clinical/chart.tsx (small reusable chart component)
+tests:
+  - Playwright should be able to add a session and see average update
+constraints:
+  - No vendor text/assets; behaviors only

@@ -1,0 +1,82 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20250916143950
+Username: DELL_LAPTOP_GK\gioka
+RunAs User: DELL_LAPTOP_GK\gioka
+Configuration Name: 
+Machine: DELL_LAPTOP_GK (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 13296
+PSVersion: 5.1.26100.6584
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.6584
+BuildVersion: 10.0.26100.6584
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\magellan\aba-agent\app\step4-build-20250916-143950.log
+PS C:\magellan\aba-agent\app> function FreePort([int]$p) {
+  try {
+    $pids = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+    if ($pids) {
+      foreach ($pid in $pids) {
+        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+        Write-Host "Killed PID $pid on port $p"
+      }
+    } else {
+      Write-Host "Nothing on port $p"
+    }
+  } catch {
+    # Use a format string to avoid "$var:" parsing issues
+    Write-Warning ("Could not query/kill port {0}: {1}" -f $p, $_)
+  }
+}
+PS C:\magellan\aba-agent\app> Set-Location $App
+PS C:\magellan\aba-agent\app> FreePort 4173
+Nothing on port 4173
+PS C:\magellan\aba-agent\app> if (Test-Path "$App\node_modules") { Remove-Item -Recurse -Force "$App\node_modules" }
+PS C:\magellan\aba-agent\app> if (Test-Path "$App\package-lock.json") { Remove-Item -Force "$App\package-lock.json" }
+PS C:\magellan\aba-agent\app> & npm install; if ($LASTEXITCODE -ne 0) { throw "npm install failed ($LASTEXITCODE)" }
+
+PS C:\magellan\aba-agent\app> TerminatingError(): "npm install failed (1)"
+npm install failed (1)
+npm install failed (1)
+At line:1 char:43
++ ...  ($LASTEXITCODE -ne 0) { throw "npm install failed ($LASTEXITCODE)" }
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (npm install failed (1):String) [], RuntimeException
+    + FullyQualifiedErrorId : npm install failed (1)
+
+PS C:\magellan\aba-agent\app> & npm install -D @vitejs/plugin-react; if ($LASTEXITCODE -ne 0) { throw "install @vitejs/plugin-react failed ($LASTEXITCODE)" }
+
+PS C:\magellan\aba-agent\app> TerminatingError(): "install @vitejs/plugin-react failed (1)"
+install @vitejs/plugin-react failed (1)
+install @vitejs/plugin-react failed (1)
+At line:1 char:67
++ ... DE -ne 0) { throw "install @vitejs/plugin-react failed ($LASTEXITCODE ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (install @vitejs/plugin-react failed (1):String) [], RuntimeException
+    + FullyQualifiedErrorId : install @vitejs/plugin-react failed (1)
+
+PS C:\magellan\aba-agent\app> & npm run build; if ($LASTEXITCODE -ne 0) { throw "npm run build failed ($LASTEXITCODE)" }
+
+PS C:\magellan\aba-agent\app> TerminatingError(): "npm run build failed (1)"
+npm run build failed (1)
+npm run build failed (1)
+At line:1 char:45
++ ... $LASTEXITCODE -ne 0) { throw "npm run build failed ($LASTEXITCODE)" }
++                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (npm run build failed (1):String) [], RuntimeException
+    + FullyQualifiedErrorId : npm run build failed (1)
+
+PS C:\magellan\aba-agent\app> Write-Host "`nBuild completed successfully." -ForegroundColor Green
+
+Build completed successfully.
+PS C:\magellan\aba-agent\app> Stop-Transcript
+**********************
+Windows PowerShell transcript end
+End time: 20250916143951
+**********************

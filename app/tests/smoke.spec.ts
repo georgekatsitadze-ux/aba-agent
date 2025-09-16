@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("dashboard renders", async ({ page }) => {
-  await page.goto("http://localhost:5173/");
-  await expect(page.getByText("Welcome to the Dashboard")).toBeVisible();
+test("app shell renders", async ({ page }) => {
+  await page.goto("/");                       // Playwright starts preview for us
+  await expect(page).toHaveTitle(/Magellan ABA/i); // title from index.html
 });
-

@@ -1,4 +1,10 @@
+﻿import React from "react";
 
-// (agent) touched
-
-// (agent) touched
+export default function DashboardPage() {
+  return (
+    <div>
+      <h2>Welcome to the Dashboard 🚀</h2>
+      <p>Quick links and KPIs will go here.</p>
+    </div>
+  );
+}

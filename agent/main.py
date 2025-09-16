@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Minimal agent orchestrator for the ABA app.
+Agent orchestrator for the ABA app.
 
 What it does on each run:
-1) Ensures git repo + dashboard file exist.
-2) Makes a tiny UTF-8-safe change to prove the loop works.
-3) Installs deps (Windows-friendly npm/npx detection).
-4) Runs Playwright tests.
-5) Writes agent/reports/latest.json.
+1) Ensures a git repo and a minimal dashboard file exist.
+2) Tries LLM-based code generation (agent/generator.py); if unavailable, makes a tiny safe edit.
+3) Installs app deps and runs Playwright tests (app/).
+4) Writes agent/reports/latest.json with the result.
+
+Tip for LLM generation:
+  pip install requests pyyaml
+  set OPENAI_API_KEY=...  (or $env:OPENAI_API_KEY in PowerShell)
 """
 
 import os
@@ -19,25 +22,28 @@ import pathlib
 import platform
 from typing import Tuple
 
-# ---- Paths ----
+# ---- Paths / setup ----
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP_DIR = REPO_ROOT / "app"
-SERVER_DIR = REPO_ROOT / "server"
-TASK_DIR = REPO_ROOT / "agent" / "tasks"
 REPORTS_DIR = REPO_ROOT / "agent" / "reports"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 IS_WINDOWS = os.name == "nt" or platform.system().lower().startswith("win")
 
-def bin_name(name: str) -> str:
-    # On Windows, the npm/npx launchers are *.cmd
+
+def _bin(name: str) -> str:
+    # On Windows, npm/npx launchers are *.cmd
     if IS_WINDOWS and name in {"npm", "npx"}:
         return f"{name}.cmd"
     return name
 
+
 def sh(cmd, cwd=None, check=True, env=None):
     """Run a command with live output."""
-    cmd = [bin_name(c) if i == 0 else c for i, c in enumerate(cmd)]
+    if isinstance(cmd, (list, tuple)):
+        cmd = [ _bin(cmd[0]) ] + list(cmd[1:])
+    else:
+        raise ValueError("sh(cmd) expects a list like ['npm','test']")
     print(f"$ {' '.join(cmd)}  (cwd={cwd or REPO_ROOT})")
     return subprocess.run(
         cmd,
@@ -46,12 +52,15 @@ def sh(cmd, cwd=None, check=True, env=None):
         env=env if env is not None else os.environ.copy(),
     )
 
+
 def ensure_git_repo():
+    """Initialize a git repo if needed."""
     try:
         sh(["git", "rev-parse", "--is-inside-work-tree"])
         return
     except subprocess.CalledProcessError:
         pass
+
     print("[agent] Initializing new git repository...")
     sh(["git", "init"])
     sh(["git", "add", "."])
@@ -62,12 +71,14 @@ def ensure_git_repo():
         "commit", "-m", "chore(agent): initial commit"
     ], check=False)
 
+
 def ensure_dashboard_file():
+    """Create a minimal dashboard page if missing (UTF-8)."""
     target = APP_DIR / "src" / "modules" / "DashboardPage.tsx"
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists():
-        print("[agent] Creating minimal DashboardPage.tsx")
         content = (
+            'import React from "react";\n\n'
             'export default function DashboardPage(){\n'
             '  return (\n'
             '    <div>\n'
@@ -79,45 +90,64 @@ def ensure_dashboard_file():
         )
         target.write_text(content, encoding="utf-8")
 
+
 def plan_and_generate():
-    """Make a tiny UTF-8-safe change to prove the loop works."""
-    example_file = APP_DIR / "src" / "modules" / "DashboardPage.tsx"
-    ensure_dashboard_file()
+    """
+    Try LLM generator (agent/generator.py::generate_once);
+    on failure/unavailable, make a harmless edit so the loop still progresses.
+    """
+    used_llm = False
+    try:
+        import importlib
+        # Make sure deps exist before import for clearer errors
+        for m in ("requests", "yaml"):
+            importlib.import_module(m)
+        from agent.generator import generate_once  # type: ignore
+        out = generate_once()
+        print("[agent] edits:", out.get("changed", []))
+        if out.get("notes"):
+            print("[agent] notes:", out["notes"])
+        used_llm = True
+    except Exception as e:
+        print(f"[agent] generator unavailable or failed; using fallback: {e}")
 
-    src = example_file.read_text(encoding="utf-8")
-    if "Welcome to the Dashboard" in src and "🚀" not in src:
-        src = src.replace("Welcome to the Dashboard", "Welcome to the Dashboard 🚀")
-    else:
-        src += "\n// (agent) touched\n"
-    example_file.write_text(src, encoding="utf-8")
+    if not used_llm:
+        # Fallback: tweak dashboard text once
+        example = APP_DIR / "src" / "modules" / "DashboardPage.tsx"
+        ensure_dashboard_file()
+        src = example.read_text(encoding="utf-8")
+        marker = "Welcome to the Dashboard"
+        if marker in src and "🚀" not in src:
+            src = src.replace(marker, marker + " 🚀")
+        elif "// (agent) touched" not in src:
+            src += "\n// (agent) touched\n"
+        example.write_text(src, encoding="utf-8")
 
+    # Stage + commit (don’t fail whole run on git issues)
     try:
         sh(["git", "add", "."])
         sh([
             "git",
             "-c", "user.email=agent@example.com",
             "-c", "user.name=ABA Agent",
-            "commit", "-m", "chore(agent): trivial change to prove loop"
+            "commit", "-m", "feat(agent): apply edits"
         ], check=False)
     except Exception as e:
-        print(f"[agent] Skipping git commit due to error: {e}")
+        print(f"[agent] git commit skipped: {e}")
+
 
 def ensure_node_tools():
-    """Log versions for diagnostics; don't hard-fail."""
-    try:
-        sh(["node", "-v"])
-    except Exception as e:
-        print(f"[agent] Warning: node not found in PATH: {e}")
-    try:
-        sh(["npm", "--version"])
-    except Exception as e:
-        print(f"[agent] Warning: npm not found in PATH: {e}")
-    try:
-        sh(["npx", "--version"])
-    except Exception as e:
-        print(f"[agent] Warning: npx not found in PATH: {e}")
+    """Log Node/npm/npx versions for diagnostics."""
+    try: sh(["node", "-v"])
+    except Exception as e: print(f"[agent] warning: node not found: {e}")
+    try: sh(["npm", "--version"])
+    except Exception as e: print(f"[agent] warning: npm not found: {e}")
+    try: sh(["npx", "--version"])
+    except Exception as e: print(f"[agent] warning: npx not found: {e}")
+
 
 def npm_install_with_fallback(app_dir: pathlib.Path):
+    """Prefer npm ci when lockfile exists, else npm install; fallback to install on failure."""
     lockfile = app_dir / "package-lock.json"
     try:
         if lockfile.exists():
@@ -127,14 +157,20 @@ def npm_install_with_fallback(app_dir: pathlib.Path):
     except subprocess.CalledProcessError:
         sh(["npm", "install"], cwd=app_dir)
 
+
 def playwright_install(app_dir: pathlib.Path):
-    # On Windows, no --with-deps
-    if IS_WINDOWS:
-        sh(["npx", "playwright", "install"], cwd=app_dir)
-    else:
-        sh(["npx", "playwright", "install", "--with-deps"], cwd=app_dir)
+    """Install Playwright browsers (no --with-deps on Windows)."""
+    cmd = ["npx", "playwright", "install"]
+    if not IS_WINDOWS:
+        cmd.append("--with-deps")
+    sh(cmd, cwd=app_dir)
+
 
 def run_tests() -> Tuple[bool, str]:
+    """
+    Install deps and run Playwright tests in the app.
+    The Playwright config controls whether it uses dev or preview.
+    """
     try:
         npm_install_with_fallback(APP_DIR)
         playwright_install(APP_DIR)
@@ -147,19 +183,24 @@ def run_tests() -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Unexpected error: {e}"
 
-def main():
+
+def write_report(ok: bool, msg: str):
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[agent] run at {ts}")
-
-    ensure_git_repo()
-    ensure_node_tools()
-    plan_and_generate()
-    ok, msg = run_tests()
-
     summary = {"timestamp": ts, "tests_ok": ok, "message": msg}
     (REPORTS_DIR / "latest.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print("[agent] summary:", json.dumps(summary))
+
+
+def main():
+    print(f"[agent] run at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    ensure_git_repo()
+    ensure_node_tools()
+    ensure_dashboard_file()
+    plan_and_generate()
+    ok, msg = run_tests()
+    write_report(ok, msg)
     return 0 if ok else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,4 +1,4 @@
-﻿{
+{
   "compilerOptions": {
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
@@ -7,8 +7,7 @@
     "moduleResolution": "Bundler",
     "strict": true,
     "baseUrl": "./",
-    "paths": { "@/*": ["src/*"] },
-    "types": ["vite/client", "node"]
+    "paths": { "@/*": ["src/*"] }
   },
-  "include": ["src"]
+  "include": ["src", "tests", "playwright.config.ts"]
 }
