@@ -1,0 +1,16 @@
+title: Design v1 — multiple theme options + component polish (clean-room)
+goals:
+  - Create 4–6 distinct visual themes in app/src/theme/themes.ts (names, tokens, shadows, radii)
+  - Polish base components (Button, Card, Table header) to use CSS vars + rounded corners + subtle shadows
+  - Make Style page show the themes as cards with "Use" buttons; persist to localStorage
+  - Keep contrast accessible and avoid copying vendor assets/text
+deliverables:
+  - app/src/theme/themes.ts
+  - app/src/modules/ThemeGallery.tsx
+  - polish: apply tokens to header/nav/buttons/tables
+tests:
+  - Existing Playwright tests must still pass (no selector breaks)
+constraints:
+  - No external UI libraries; only CSS vars; keep changes minimal and compiling
+notes:
+  - Favor modern, clean, airy design; use spacing and card shadows sparingly

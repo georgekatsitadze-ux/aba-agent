@@ -1,35 +1,50 @@
 name: nightly-agent
 on:
   schedule:
-    - cron: "0 8 * * *" # 8:00 UTC daily
+    - cron: "0 5 * * *"   # 1:00am US/Eastern ~ 05:00 UTC
   workflow_dispatch: {}
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4o-mini
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
+
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
+
       - name: Install server deps
-        run: |
-          cd server
-          npm ci || npm i
+        run: cd server && (npm ci || npm i)
+
       - name: Start API (background)
         run: |
           cd server
           nohup npm run dev &
+
       - name: Install app deps
+        run: cd app && (npm ci || npm i)
+
+      - name: Python deps
+        run: pip install requests pyyaml
+
+      - name: Run agent (codegen + tests)
         run: |
-          cd app
-          npm ci || npm i
-      - name: Run agent
-        run: |
-          python3 agent/main.py || true
-      - name: Upload agent report
-        uses: actions/upload-artifact@v4
+          python agent/main.py || true
+
+      - name: Create PR with design changes
+        uses: peter-evans/create-pull-request@v6
         with:
-          name: agent-report
-          path: agent/reports/latest.json
+          commit-message: "chore(design): nightly theme variants"
+          title: "Design: nightly theme variants"
+          body: "Auto-generated theme options and component polish."
+          branch: design/auto-${{ github.run_id }}
+          delete-branch: true
