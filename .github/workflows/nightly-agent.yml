@@ -17,16 +17,15 @@ jobs:
   run-agent:
     runs-on: ubuntu-latest
     env:
-      # ⬇️ Set in repo Settings → Secrets and variables → Actions
+      # Set in repo Settings → Secrets and variables → Actions
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      # Optional override via secret; otherwise use default below
+      # Optional overrides:
       OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o-mini' }}
-      # Push the agent to iterate multiple times per run
       AGENT_PASSES: ${{ secrets.AGENT_PASSES || '3' }}
 
     steps:
       - name: Checkout
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -44,6 +43,7 @@ jobs:
         run: |
           cd server
           npm ci || npm i
+
       - name: Start API
         run: |
           cd server
@@ -64,4 +64,51 @@ jobs:
       # ----- Run the agent (codegen + tests) -----
       - name: Run agent
         run: |
-          python agent/m
+          python agent/main.py || true
+
+      # ----- Build app and take design screenshots -----
+      - name: Build app
+        run: |
+          cd app
+          npm run build
+
+      - name: Install Playwright browsers
+        run: |
+          cd app
+          npx playwright install --with-deps
+
+      - name: Preview & capture screenshots
+        run: |
+          cd app
+          nohup npm run preview -- --port 4173 --strictPort >/dev/null 2>&1 &
+          sleep 5
+          npx playwright test tests/design-snapshots.spec.ts --reporter=line || true
+
+      # ----- Upload artifacts -----
+      - name: Upload agent report
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-report
+          path: agent/reports/latest.json
+          if-no-files-found: warn
+
+      - name: Upload design screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-snapshots
+          path: app/test-results/*.png
+          if-no-files-found: warn
+
+      # ----- Create a PR with any changes -----
+      - name: Create PR with design changes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(agent): nightly edits & theme variants"
+          title: "Design: nightly theme variants"
+          body: |
+            Auto-generated changes from nightly agent run:
+            - Multi-pass codegen (`AGENT_PASSES`=${{ env.AGENT_PASSES }})
+            - Theme/token updates and component polish
+            - See attached 'design-snapshots' artifact for page previews
+          branch: design/auto-${{ github.run_id }}
+          delete-branch: true
