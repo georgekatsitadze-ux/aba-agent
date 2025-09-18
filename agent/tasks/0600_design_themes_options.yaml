@@ -1,16 +1,16 @@
-title: Design v1 — multiple theme options + component polish (clean-room)
+title: Design v1 — multi-theme + visible polish (clean-room)
 goals:
-  - Create 4–6 distinct visual themes in app/src/theme/themes.ts (names, tokens, shadows, radii)
-  - Polish base components (Button, Card, Table header) to use CSS vars + rounded corners + subtle shadows
-  - Make Style page show the themes as cards with "Use" buttons; persist to localStorage
-  - Keep contrast accessible and avoid copying vendor assets/text
+  - Add 6 distinct themes in app/src/theme/themes.ts (tokens: bg, card, text, muted, primary, ring, radius, shadow)
+  - Apply tokens to header/nav/buttons/tables/cards across pages (Dashboard/Patients/Billing/Schedule/Clinical)
+  - Ensure Style page shows theme cards with “Use” and switching persists to localStorage
+  - Add gentle hover/focus states; accessible contrast
 deliverables:
   - app/src/theme/themes.ts
   - app/src/modules/ThemeGallery.tsx
-  - polish: apply tokens to header/nav/buttons/tables
+  - small edits in app/index.html and app/src/main.tsx (classes .card, .btn)
 tests:
-  - Existing Playwright tests must still pass (no selector breaks)
+  - All existing Playwright tests remain green
 constraints:
-  - No external UI libraries; only CSS vars; keep changes minimal and compiling
+  - No external UI libraries; minimal, compiling changes only
 notes:
-  - Favor modern, clean, airy design; use spacing and card shadows sparingly
+  - Prefer a calm healthcare aesthetic; avoid copying vendor text/art

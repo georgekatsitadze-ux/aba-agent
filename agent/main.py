@@ -92,48 +92,24 @@ def ensure_dashboard_file():
 
 
 def plan_and_generate():
-    """
-    Try LLM generator (agent/generator.py::generate_once);
-    on failure/unavailable, make a harmless edit so the loop still progresses.
-    """
-    used_llm = False
-    try:
-        import importlib
-        # Make sure deps exist before import for clearer errors
-        for m in ("requests", "yaml"):
-            importlib.import_module(m)
-        from agent.generator import generate_once  # type: ignore
-        out = generate_once()
-        print("[agent] edits:", out.get("changed", []))
-        if out.get("notes"):
-            print("[agent] notes:", out["notes"])
-        used_llm = True
-    except Exception as e:
-        print(f"[agent] generator unavailable or failed; using fallback: {e}")
-
-    if not used_llm:
-        # Fallback: tweak dashboard text once
-        example = APP_DIR / "src" / "modules" / "DashboardPage.tsx"
-        ensure_dashboard_file()
-        src = example.read_text(encoding="utf-8")
-        marker = "Welcome to the Dashboard"
-        if marker in src and "🚀" not in src:
-            src = src.replace(marker, marker + " 🚀")
-        elif "// (agent) touched" not in src:
-            src += "\n// (agent) touched\n"
-        example.write_text(src, encoding="utf-8")
-
-    # Stage + commit (don’t fail whole run on git issues)
-    try:
-        sh(["git", "add", "."])
-        sh([
-            "git",
-            "-c", "user.email=agent@example.com",
-            "-c", "user.name=ABA Agent",
-            "commit", "-m", "feat(agent): apply edits"
-        ], check=False)
-    except Exception as e:
-        print(f"[agent] git commit skipped: {e}")
+    from agent.generator import generate_once
+    passes = int(os.getenv("AGENT_PASSES", "3"))
+    for i in range(1, passes+1):
+        print(f"[agent] pass {i}/{passes}")
+        try:
+            out = generate_once()
+            print("[agent] edits:", out.get("changed", []))
+            if out.get("notes"): print("[agent] notes:", out["notes"])
+        except Exception as e:
+            print(f"[agent] generator error on pass {i}: {e}")
+            break
+        # commit after each pass
+        try:
+            sh(["git","add","."])
+            sh(["git","-c","user.email=agent@example.com","-c","user.name=ABA Agent",
+                "commit","-m",f"feat(agent): design pass {i}"], check=False)
+        except Exception as e:
+            print(f"[agent] git commit skipped: {e}")
 
 
 def ensure_node_tools():
