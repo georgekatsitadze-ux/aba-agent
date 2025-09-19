@@ -1,4 +1,5 @@
-﻿import { Theme } from "./themes";
+﻿
+import { Theme } from "./themes";
 
 export function applyTheme(theme: Theme) {
   const r = document.documentElement;

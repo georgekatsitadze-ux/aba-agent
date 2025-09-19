@@ -4,12 +4,27 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "// Prisma utilities": "",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init_schedule",
+    "prisma:studio": "prisma studio",
+    "// Seed (you also get `npx prisma db seed` via the Prisma hook below)": "",
+    "prisma:seed": "node prisma/seed.js",
+    "// Convenience: wipe the SQLite file, re-migrate, and reseed": "",
+    "db:reset": "rimraf prisma/dev.db && npm run prisma:migrate && npm run prisma:seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@slack/web-api": "^7.10.0",
+    "@prisma/client": "^5.18.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.18.0",
+    "rimraf": "^5.0.7"
   }
 }
