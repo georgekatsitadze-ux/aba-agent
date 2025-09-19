@@ -3,3 +3,11 @@ dist
 .playwright
 agent/reports/*
 server/.env
+# server / Prisma DB
+server/prisma/dev.db
+
+# local env (keep Slack/API secrets local)
+server/.env
+
+# build caches
+app/node_modules/.vite
