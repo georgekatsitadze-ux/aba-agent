@@ -1,15 +1,38 @@
-import { WebClient } from "@slack/web-api";
+// slack.js — safe, dependency-free wrapper.
+// Tries to lazy-import @slack/web-api if present; otherwise becomes a no-op.
 
-const enabled = /^true$/i.test(process.env.SLACK_NOTIFICATIONS_ENABLED || "");
-const token = process.env.SLACK_BOT_TOKEN || "";
-const defaultChannel = process.env.SLACK_CHANNEL_ID || "";
-const client = token ? new WebClient(token) : null;
+let client = null;
+let enabled = false;
+
+function readEnv() {
+  try {
+    enabled = /^true$/i.test(process.env.SLACK_NOTIFICATIONS_ENABLED || "");
+  } catch {
+    enabled = false;
+  }
+}
+
+readEnv();
 
 export async function postToSlack({ text, channel, blocks }) {
-  if (!enabled) throw new Error("SLACK_NOTIFICATIONS_DISABLED");
-  if (!client || !token) throw new Error("SLACK_TOKEN_MISSING");
-  const chan = channel || defaultChannel;
-  if (!chan) throw new Error("SLACK_CHANNEL_MISSING");
+  // If disabled, silently skip.
+  if (!enabled) return { ok: false, skipped: "disabled" };
+
+  // Try lazy import on first use.
+  if (!client) {
+    try {
+      const { WebClient } = await import("@slack/web-api");
+      const token = process.env.SLACK_BOT_TOKEN || "";
+      if (!token) return { ok: false, skipped: "missing_token" };
+      client = new WebClient(token);
+    } catch (e) {
+      // Package not installed; skip without throwing.
+      return { ok: false, skipped: "no_sdk" };
+    }
+  }
+
+  const chan = channel || process.env.SLACK_CHANNEL_ID || "";
+  if (!chan) return { ok: false, skipped: "missing_channel" };
   const res = await client.chat.postMessage({ channel: chan, text: text || "(no text)", blocks });
-  return { ts: res.ts, channel: res.channel };
+  return { ok: true, ts: res.ts, channel: res.channel };
 }

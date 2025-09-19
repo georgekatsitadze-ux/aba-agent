@@ -1,0 +1,33 @@
+// Prisma client generator
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite datasource (DB file lives at server/prisma/dev.db)
+// Make sure prisma/.env has: DATABASE_URL="file:./dev.db"
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite note:
+// - No native enums. We store UPPERCASE strings and validate in the app.
+//   status: "SCHEDULED" | "IN_SESSION" | "CANCELED" | "NO_SHOW" | "NAP" | "SPEECH"
+//   providerRole: "RBT" | "BCBA" | "SLP" | "OT" | "PT"
+
+model ScheduleBlock {
+  id           Int      @id @default(autoincrement())
+  date         String   // "YYYY-MM-DD" local date
+  start        String   // "HH:MM" local time
+  end          String   // "HH:MM" local time
+
+  status       String   @default("SCHEDULED")
+  providerRole String
+
+  providerId   Int
+  patientId    Int
+  roomId       Int?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
