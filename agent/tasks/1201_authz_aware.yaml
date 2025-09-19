@@ -1,0 +1,23 @@
+title: Authorization-aware scheduling — budget bar & hard stop
+goals:
+  - Server: new endpoint /api/authorizations?patientId=.. returns remaining minutes for the period (mock/in-memory ok)
+  - Add Block panel: show a budget bar (remaining vs requested) with warn at 80/90/95%
+  - Hard stop toggle (org setting variable in server): if enabled, clamp end time on create/extend to remaining; else warn only
+  - On extend/move: when hard stop is on, auto-clamp and show a toast "clamped to remaining auth"
+
+deliverables:
+  - server/routes/authorizations.js  # returns { remainingMin, window:"month", lastUpdated }
+  - server/server.js                 # wire route, expose HARD_STOP=true/false from process.env or const
+  - app/src/modules/SchedulePage.tsx # Add Block budget bar; clamp UI; toast after clamp on PUT
+  - app/tests/authz-aware.spec.ts    # create beyond remaining -> hard stop clamps; soft mode -> allows with warning badge
+
+tests:
+  - With HARD_STOP=true: attempt to create 180min when remaining=90 -> block saved at 90min; UI shows toast
+  - With HARD_STOP=false: same attempt succeeds; budget bar shows overage (warn-red)
+  - Extend beyond remaining -> clamped (hard stop) or allowed with warning (soft)
+
+constraints:
+  - No new UI libraries; simple div-based progress bar is fine
+  - Mock authz in-memory for now (patientId->remainingMin)
+notes:
+  - On server PUT/POST, if HARD_STOP, clamp 'end' to not exceed remaining; return actual saved times

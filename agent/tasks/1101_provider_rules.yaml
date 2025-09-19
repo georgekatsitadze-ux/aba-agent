@@ -1,0 +1,25 @@
+title: Provider availability & credential gates (PTO/holidays/max-hours/credentials)
+goals:
+  - Deny scheduling on provider PTO/holiday days (return 409 with {code:"pto"})
+  - Enforce max daily hours (e.g., 10h/day) and weekly hours (e.g., 50h/wk); on hit return 409 with {code:"max_hours"}
+  - Simple credential gates: if provider lacks "ABA_ACTIVE" or credential expired -> deny blocks with {code:"credential"}
+  - UI: show inline badge on Add Block panel (if date is PTO/holiday) and tooltip on provider row when near limits
+
+deliverables:
+  - server/lib/availability.js      # pto/holiday + hours aggregation helpers
+  - server/lib/credentials.js       # minimal gate: providerId->boolean/expiry map
+  - server/server.js                # call availability/credentials checks before conflictEngine
+  - app/src/modules/SchedulePage.tsx # add tiny badges/tooltips in Add Block and on provider row header
+  - app/tests/provider-rules.spec.ts # playwright: schedule on PTO denied; exceeding hours denied; credential gate denied
+
+tests:
+  - Set a PTO for providerId=1 on today -> creating a block for providerId=1 returns 409 with code "pto"
+  - Create many hours for a day -> exceed 10h/day returns 409 with code "max_hours"
+  - Mark providerId=2 missing credential -> attempt returns 409 with code "credential"
+
+constraints:
+  - No DB schema change required yet; use in-memory tables/maps alongside Prisma reads
+  - Keep response 409 shape: { error:"conflict", reasons:[{code, details}] } OR reuse existing {conflicts, copresence} and add "reasons"
+notes:
+  - Prefer adding "reasons" array to current 409 body: combine conflictEngine output + availability/credential results
+  - Badge UI is non-blocking: just visual hints based on a lightweight call or cached state

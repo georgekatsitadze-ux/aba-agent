@@ -1,0 +1,22 @@
+title: BCBA supervision ratio + shadow snapshot
+goals:
+  - Compute monthly supervision ratio per patient: bcbaOverlapMin / rbtMin (same patient, same month)
+  - Server route /api/supervision?month=YYYY-MM returns list [{patientId, ratioPct, bcbaMin, rbtMin}]
+  - UI: in Schedule, show small badge "Supervision 3.2%" on patient rows; warn (amber/red) under thresholds (e.g., <5% / <3%)
+  - BCBA shadow panel: live list of patients currently supervised (BCBA overlaps an active RBT block now)
+
+deliverables:
+  - server/lib/supervision.js       # overlap math; month window; current-now snapshot
+  - server/routes/supervision.js    # exposes /api/supervision and /api/supervision/now
+  - server/server.js                # mount routes
+  - app/src/modules/SchedulePage.tsx # row badges + a small "BCBA Shadow" right rail/panel
+  - app/tests/supervision.spec.ts   # playwright: below threshold shows warning badge; add BCBA overlap -> snapshot shows patient
+
+tests:
+  - Seed: patient 1 has 600 min RBT; 0 min BCBA -> badge red (<3%)
+  - Add BCBA overlap 60 min this month -> badge ~10%; "shadow now" shows patient if overlapping current time
+constraints:
+  - In-memory calculation over Prisma schedule blocks is fine
+  - Keep performance: compute for current month only; cap to current date
+notes:
+  - Use local date and local minutes; avoid UTC shifts

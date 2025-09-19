@@ -1,0 +1,24 @@
+title: Conflicts UX — manager-only override
+goals:
+  - Server: allow override only when request header X-Role: Manager, else 403 if override:true
+  - App: show Override button in the Conflict modal only when role=Manager (temporary flag in app config)
+  - App: replace raw JSON in conflict modal with human-readable labels (provider/patient names)
+  - App: after a failed attempt, badge the involved row header with a small "conflict" pill for the current render
+
+deliverables:
+  - server/server.js                # check header X-Role on POST/PUT when override=true
+  - app/src/modules/SchedulePage.tsx # role-gated "Override & Save"; friendly modal labels; row badge
+  - app/src/lib/appConfig.ts        # new file: export { userRole: "Manager" | "Staff" } (default Staff)
+  - app/tests/conflicts-override.spec.ts # playwright: non-manager can't override; manager can
+
+tests:
+  - Create or move a block to overlap same provider -> Conflict modal appears
+  - With role=Staff (default) Override button is hidden; set role=Manager -> visible; click => save succeeds
+  - Row header shows a "conflict" badge after a failed attempt (clears on reload)
+
+constraints:
+  - No new runtime deps
+  - Keep API response shape for 409: { error, conflicts[], copresence[] }
+notes:
+  - In server, if override=true and X-Role != Manager, return 403 { error: "forbidden" }
+  - In app, import { userRole } from appConfig and gate the button
